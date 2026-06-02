@@ -244,7 +244,14 @@ class WebServer {
           //     "/repos/OWNERNAME/REPONAME/contributors"
 
           Map<String, String> query_pairs = new LinkedHashMap<String, String>();
-          query_pairs = splitQuery(request.replace("github?", ""));
+	  try {
+          	query_pairs = splitQuery(request.replace("github?", ""));
+	  } catch (Exception e) {
+		  builder.append("HTTP/1.1 400 Bad Request\n");
+		  builder.append("Content-Type: text/html; charset=utf-8\n");
+		  builder.append("\n");
+		  builder.append("'?' required after path");
+	  }
 
           if(!query_pairs.containsKey("query") || query_pairs.get("query").isEmpty()) {
 		  builder.append("HTTP/1.1 400 Bad Request\n");
@@ -293,7 +300,15 @@ class WebServer {
 
 	} else if (request.contains("palindrome?")) {
 
-		Map<String, String> params = splitQuery(request.replace("palindrome?", ""));
+		try {
+			Map<String, String> params = splitQuery(request.replace("palindrome?", ""));
+	  	} catch (Exception e) {
+		  	builder.append("HTTP/1.1 400 Bad Request\n");
+		  	builder.append("Content-Type: text/html; charset=utf-8\n");
+		  	builder.append("\n");
+		  	builder.append("'?' required after path");
+		}
+
 		if (!params.containsKey("text") || !params.containsKey("ignoreCase")) {
 			builder.append("HTTP/1.1 400 Bad Request\n");
 			builder.append("Content-Type: text/html; charset=utf-8\n");
@@ -333,7 +348,14 @@ class WebServer {
 			}
 		}
 	} else if (request.contains("projectile?")) {
-		Map<String, String> params = splitQuery(request.replace("projectile?", ""));
+		try {
+			Map<String, String> params = splitQuery(request.replace("projectile?", ""));
+	  	} catch (Exception e) {
+		  	builder.append("HTTP/1.1 400 Bad Request\n");
+		  	builder.append("Content-Type: text/html; charset=utf-8\n");
+		  	builder.append("\n");
+		  	builder.append("'?' required after path");
+		}
 
 		if(!params.containsKey("speed") || !params.containsKey("angle")) {
 			builder.append("HTTP/1.1 400 Bad Request\n");

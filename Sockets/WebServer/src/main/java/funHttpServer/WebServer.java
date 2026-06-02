@@ -25,7 +25,8 @@ import java.util.Random;
 import java.util.Map;
 import java.util.LinkedHashMap;
 import java.nio.charset.Charset;
-
+import org.json.JSONArray;
+import org.json.JSONObject;
 class WebServer {
   public static void main(String args[]) {
     WebServer server = new WebServer(9000);
@@ -201,18 +202,34 @@ class WebServer {
           // extract path parameters
           query_pairs = splitQuery(request.replace("multiply?", ""));
 
-          // extract required fields from parameters
-          Integer num1 = Integer.parseInt(query_pairs.get("num1"));
-          Integer num2 = Integer.parseInt(query_pairs.get("num2"));
+	  if (!query_pairs.containsKey("num1") || !query_pairs.containsKey("num2")) {
+		builder.append("HTTP/1.1 400 Bad Request\n");
+		builder.append("Content-Type: text/html; charset=utf\n");
+		builder.append("\n");
+		builder.append("Missing parameters: num1 and num2 are required");
+	  } else {
+		  try {
 
-          // do math
-          Integer result = num1 * num2;
 
-          // Generate response
-          builder.append("HTTP/1.1 200 OK\n");
-          builder.append("Content-Type: text/html; charset=utf-8\n");
-          builder.append("\n");
-          builder.append("Result is: " + result);
+         		 // extract required fields from parameters
+         		 Integer num1 = Integer.parseInt(query_pairs.get("num1"));
+          		Integer num2 = Integer.parseInt(query_pairs.get("num2"));
+
+          		// do math
+          		Integer result = num1 * num2;
+
+          		// Generate response
+          		builder.append("HTTP/1.1 200 OK\n");
+          		builder.append("Content-Type: text/html; charset=utf-8\n");
+          		builder.append("\n");
+          		builder.append("Result is: " + result);
+		  } catch (NumberFormatException e) {
+			builder.append("HTTP/1.1 400 Bad Request\n");
+			builder.append("Content-Type: text/html; charset=utf-8\n");
+			builder.append("\n");
+			builder.append("Invalid input: num1 and num2 must be integers");
+		  }
+	  }
 
           // TODO: Include error handling here with a correct error code and
           // a response that makes sense
@@ -228,16 +245,126 @@ class WebServer {
 
           Map<String, String> query_pairs = new LinkedHashMap<String, String>();
           query_pairs = splitQuery(request.replace("github?", ""));
-          String json = fetchURL("https://api.github.com/" + query_pairs.get("query"));
-          System.out.println(json);
 
-          builder.append("HTTP/1.1 200 OK\n");
-          builder.append("Content-Type: text/html; charset=utf-8\n");
-          builder.append("\n");
-          builder.append("Check the todos mentioned in the Java source file");
+          if(!query_pairs.containsKey("query") || query_pairs.get("query").isEmpty()) {
+		  builder.append("HTTP/1.1 400 Bad Request\n");
+		  builder.append("Content-Type: text/html; charset=utf-8\n");
+		  builder.append("\n");
+		  builder.append("Missing parameter: query");
+	  } else {
+		  try {
+			  String query = query_pairs.get("query");
+			  String json = fetchURL("https://api.github.com/" + query);
+			  if (json.startsWith("{") && json.contains("\"message\"")) {
+				  builder.append("HTTP/1.1 502 Bad Gateway\n");
+				  builder.append("Content-Type: text/html; charset=utf-8\n");
+				  builder.append("\n");
+				  builder.append("Github returned an error: " + json);
+			  } else {
+				  JSONArray arr = new JSONArray(json);
+				  builder.append("HTTP/1.1 200 OK\n");
+				  builder.append("Content-Type: text/html; charset=utf-8\n");
+				  builder.append("\n");
+				  builder.append("<h2>Github Repos</h2>\n<ul>");
+
+				  for (int i = 0; i < arr.length(); i++) {
+					  JSONObject repo = arr.getJSONObject(i);
+					  String fullName = repo.optString("full_name", "N/A");
+					  int id = repo.optInt("id", -1);
+					  String owner = repo.getJSONObject("owner").optString("login", "N/A");
+					  builder.append("<li>");
+					  builder.append("Name: " + fullName + "<br>");
+					  builder.append("ID: " + id + "<br>");
+					  builder.append("Owner: " + owner);
+					  builder.append("</li><br>");
+				  }
+				  builder.append("</ul>");
+			  }
+		  } catch (Exception e) {
+			  builder.append("HTTP/1.1 500 Internal Server Error\n");
+			  builder.append("Content-Type: text/html; charset=utf-8\n");
+			  builder.append("\n");
+			  builder.append("Server error whlie processing github request");
+		  }
+	  }
+	  
           // TODO: Parse the JSON returned by your fetch and create an appropriate
           // response based on what the assignment document asks for
 
+	} else if (request.contains("palindrome?")) {
+
+		Map<String, String> params = splitQuery(request.replace("palindrome?", ""));
+		if (!params.containsKey("text") || !params.containsKey("ignoreCase")) {
+			builder.append("HTTP/1.1 400 Bad Request\n");
+			builder.append("Content-Type: text/html; charset=utf-8\n");
+			builder.append("\n");
+			builder.append("Missing parameters: text and ignoreCase are required.");
+		} else {
+			String text = params.get("text");
+			String ignoreCase = params.get("ignoreCase");
+
+			if (text == null || text.isEmpty()) {
+				builder.append("HTTP/1.1 400 Bad Reqest\n");
+				builder.append("Contenxt-Type: text/html; charset=utf-8\n");
+				builder.append("\n");
+				builder.append("Text cannot be empty.");
+			} else if (!ignoreCase.equalsIgnoreCase("true") && !ignoreCase.equalsIgnoreCase("false")) {
+
+				builder.append("HTTP/1.1 400 Bad Reqest\n");
+				builder.append("Contenxt-Type: text/html; charset=utf-8\n");
+				builder.append("\n");
+				builder.append("ignoreCase must be 'true' or 'false'.");
+			} else {
+				boolean iCase = Boolean.parseBoolean(ignoreCase);
+				String processed = iCase ? text.toLowerCase() : text;
+				String reversed = new StringBuilder(processed).reverse().toString();
+				boolean isPalindrome = processed.equals(reversed);
+				builder.append("HTTP/1.1 200 OK\n");
+				builder.append("Content-Type: text/html; charset=utf-8\n");
+				builder.append("\n");
+
+				if(isPalindrome) {
+					builder.append("\"" + text + "\" is a palindrome");
+					if (iCase) builder.append(" (case insensitive) ");
+				} else {
+					builder.append("\"" + text + "\" is not a palindrome");
+					if (iCase) builder.append(" (case insensitive) ");
+				}
+			}
+		}
+	} else if (request.contains("projectile?")) {
+		Map<String, String> params = splitQuery(request.replace("projectile?", ""));
+
+		if(!params.containsKey("speed") || !params.containsKey("angle")) {
+			builder.append("HTTP/1.1 400 Bad Request\n");
+			builder.append("Content-Type: text/html; charset=utf-8\n\n");
+			builder.append("Missing parameters: speed and angle are required parameters");
+		} else {
+			try {
+				double speed = Double.parseDouble(params.get("speed"));
+				double angle = Double.parseDouble(params.get("angle"));
+				if(speed <= 0) {
+					builder.append("HTTP/1.1 422 Unprocessable Entity\n");
+					builder.append("Content-Type: text/html; charset=utf-8\n\n");
+					builder.append("Speed must be greater than 0");
+				} else if (angle <= 0 || angle >= 90) {
+					builder.append("HTTP/1.1 422 Unprocessable Entity\n");
+					builder.append("Content-Type: text/html; charset=utf-8\n\n");
+					builder.append("Angle must be between 0 and 90 degrees");
+				} else {
+					double g = 9.81;
+					double radians = Math.toRadians(angle);
+					double range = (speed * speed * Math.sin(2 * radians)) / g;
+					builder.append("HTTP/1.1 200 OK\n");
+					builder.append("Content-Type: text/html; charset=utf-8\n\n");
+					builder.append("Projectile range: " + String.format("%.2f", range) + " meters");
+				}
+			} catch (NumberFormatException e) {
+				builder.append("HTTP/1.1 400 Bad Request\n");
+				builder.append("Content-Type: text/html; charset=utf-8\n\n");
+				builder.append("Invalid input: speed and angle must be numbers.");
+			}
+		}
         } else {
           // if the request is not recognized at all
 

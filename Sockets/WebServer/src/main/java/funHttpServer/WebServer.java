@@ -300,8 +300,9 @@ class WebServer {
 
 	} else if (request.contains("palindrome?")) {
 
+		Map<String, String> params = null;
 		try {
-			Map<String, String> params = splitQuery(request.replace("palindrome?", ""));
+			params = splitQuery(request.replace("palindrome?", ""));
 	  	} catch (Exception e) {
 		  	builder.append("HTTP/1.1 400 Bad Request\n");
 		  	builder.append("Content-Type: text/html; charset=utf-8\n");
@@ -348,8 +349,9 @@ class WebServer {
 			}
 		}
 	} else if (request.contains("projectile?")) {
+		Map<String, String> params = null;
 		try {
-			Map<String, String> params = splitQuery(request.replace("projectile?", ""));
+			params = splitQuery(request.replace("projectile?", ""));
 	  	} catch (Exception e) {
 		  	builder.append("HTTP/1.1 400 Bad Request\n");
 		  	builder.append("Content-Type: text/html; charset=utf-8\n");
